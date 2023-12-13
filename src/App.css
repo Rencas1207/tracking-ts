@@ -5,3 +5,25 @@
   text-align: center;
   width: 100%;
 }
+
+header {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+}
+
+main {
+  margin-top: 60px;
+}
+
+table thead tr {
+  background-color: #000;
+  position: sticky;
+  top: 0;
+  color: white;
+}
+
+.pointer {
+  cursor: pointer;
+  padding: 20px 0;
+}

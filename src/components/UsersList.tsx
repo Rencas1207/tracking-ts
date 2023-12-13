@@ -1,25 +1,32 @@
-import { User } from '../types';
+import { SortBy, User } from '../types.d';
 
 interface Props {
   users: User[];
   showColors: boolean;
   deleteUser: (email: string) => void;
+  changeSorting: (sort: SortBy) => void;
 }
 
-const UsersList: React.FC<Props> = ({ users, showColors, deleteUser }) => {
+const UsersList = ({ users, showColors, deleteUser, changeSorting }: Props) => {
   return (
     <table width="100%">
       <thead>
         <tr>
           <th>Foto</th>
-          <th>Nombre</th>
-          <th>Apellido</th>
-          <th>País</th>
+          <th className="pointer" onClick={() => changeSorting(SortBy.NAME)}>
+            Nombre
+          </th>
+          <th className="pointer" onClick={() => changeSorting(SortBy.LAST)}>
+            Apellido
+          </th>
+          <th className="pointer" onClick={() => changeSorting(SortBy.COUNTRY)}>
+            País
+          </th>
           <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
-        {users.map((user, index) => {
+        {users?.map((user, index) => {
           const backgroundColor = index % 2 === 0 ? '#333' : '#666';
           const color = showColors ? backgroundColor : 'transparent';
 
