@@ -3,14 +3,32 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 import { SortBy, User } from './types.d';
 import UsersList from './components/UsersList';
+import { useQuery } from "react-query";
+
+const fetchUsers = async (page: number) => {
+  return await fetch(`https://randomuser.me/api/?results=10&seed=rencas&page=${page}`)
+      .then(async res => {
+        if(!res.ok) throw new Error('Error en la petición')
+        return await res.json()
+      })
+      .then(res => res.results)
+}
 
 function App() {
-  const [users, setUsers] = useState<User[]>([]);
+  const {isLoading , isError, data: users = [] } = useQuery<User []>(['users'], async () => await  fetchUsers(1))
+
+
+  // const [users, setUsers] = useState<User[]>([]);
   const [showColors, setShowColors] = useState(false);
   const [sorting, setSorting] = useState<SortBy>(SortBy.NONE);
   const [filterCountry, setFilterCountry] = useState<string | null>(null);
 
-  const originalUsers = useRef<User[]>([]);
+  // const originalUsers = useRef<User[]>([]);
+
+  // const [loading, setLoading] = useState(false);
+  // const [error, setError] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
 
   const toggleColors = () => {
     setShowColors(!showColors);
@@ -23,29 +41,19 @@ function App() {
   };
 
   const handleReset = () => {
-    setUsers(originalUsers.current);
+    // setUsers(originalUsers.current);
   };
 
   const handleDelete = (email: string) => {
-    const filteredUsers = users.filter((user) => user.email !== email);
-    setUsers(filteredUsers);
+    // const filteredUsers = users.filter((user) => user.email !== email);
+    // setUsers(filteredUsers);
   };
 
   const handleChangeSort = (sort: SortBy) => {
     setSorting(sort);
   };
 
-  useEffect(() => {
-    fetch('https://randomuser.me/api/?results=100')
-      .then((res) => res.json())
-      .then((res) => {
-        setUsers(res.results);
-        originalUsers.current = res.results;
-      })
-      .catch((err) => {
-        return console.log(err);
-      });
-  }, []);
+
 
   const filteredUsers = useMemo(() => {
     return typeof filterCountry === 'string' && filterCountry.length > 0
@@ -92,12 +100,16 @@ function App() {
         />
       </header>
       <main>
-        <UsersList
-          showColors={showColors}
-          users={sortedUsers}
-          deleteUser={handleDelete}
-          changeSorting={handleChangeSort}
-        />
+        {users.length > 0 && <UsersList
+                showColors={showColors}
+                users={sortedUsers}
+                deleteUser={handleDelete}
+                changeSorting={handleChangeSort}
+            />}
+        {isLoading && <p>Cargando...</p>}
+        {isError && <p>Ha habido un error...</p>}
+        {!isLoading && !isError && users.length === 0 && <p>No hay usuarios</p>}
+        {!isLoading && !isError && <button onClick={() => setCurrentPage(currentPage + 1)}>Cargar más resultados</button>}
       </main>
     </>
   );
