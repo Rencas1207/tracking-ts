@@ -1,34 +1,46 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import './App.css';
 import { SortBy, User } from './types.d';
 import UsersList from './components/UsersList';
-import { useQuery } from "react-query";
+import { useInfiniteQuery } from "react-query";
 
-const fetchUsers = async (page: number) => {
-  return await fetch(`https://randomuser.me/api/?results=10&seed=rencas&page=${page}`)
+const fetchUsers = async ({pageParam = 1}: {pageParam?: number}) => {
+  return await fetch(`https://randomuser.me/api/?results=10&seed=rencas&page=${pageParam}`)
       .then(async res => {
         if(!res.ok) throw new Error('Error en la petición')
         return await res.json()
       })
-      .then(res => res.results)
+      .then(res => {
+        const currentPage = Number(res.info.page);
+        const nextCursor = currentPage > 3 ? undefined : currentPage + 1;
+        return {
+          users: res.results,
+          nextCursor
+        }
+      })
 }
 
 function App() {
-  const {isLoading , isError, data: users = [] } = useQuery<User []>(['users'], async () => await  fetchUsers(1))
+  const {
+    isLoading ,
+    isError,
+    data,
+    refetch,
+    fetchNextPage,
+    hasNextPage
+  } = useInfiniteQuery<{nextCursor?: number, users: User []}>(['users'],
+      fetchUsers,
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor
+      }
+  )
 
+  const users: User [] = data?.pages?.flatMap(page => page.users) ?? [];
 
-  // const [users, setUsers] = useState<User[]>([]);
   const [showColors, setShowColors] = useState(false);
   const [sorting, setSorting] = useState<SortBy>(SortBy.NONE);
   const [filterCountry, setFilterCountry] = useState<string | null>(null);
-
-  // const originalUsers = useRef<User[]>([]);
-
-  // const [loading, setLoading] = useState(false);
-  // const [error, setError] = useState(false);
-
-  const [currentPage, setCurrentPage] = useState(1);
 
   const toggleColors = () => {
     setShowColors(!showColors);
@@ -40,8 +52,8 @@ function App() {
     setSorting(newSortingValue);
   };
 
-  const handleReset = () => {
-    // setUsers(originalUsers.current);
+  const handleReset = async () => {
+    await refetch();
   };
 
   const handleDelete = (email: string) => {
@@ -52,8 +64,6 @@ function App() {
   const handleChangeSort = (sort: SortBy) => {
     setSorting(sort);
   };
-
-
 
   const filteredUsers = useMemo(() => {
     return typeof filterCountry === 'string' && filterCountry.length > 0
@@ -109,7 +119,7 @@ function App() {
         {isLoading && <p>Cargando...</p>}
         {isError && <p>Ha habido un error...</p>}
         {!isLoading && !isError && users.length === 0 && <p>No hay usuarios</p>}
-        {!isLoading && !isError && <button onClick={() => setCurrentPage(currentPage + 1)}>Cargar más resultados</button>}
+        {!isLoading && !isError && hasNextPage === true && <button onClick={async () => {await fetchNextPage()}}>Cargar más resultados</button>}
       </main>
     </>
   );
