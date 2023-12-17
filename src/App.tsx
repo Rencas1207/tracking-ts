@@ -3,40 +3,11 @@ import { useMemo, useState } from 'react';
 import './App.css';
 import { SortBy, User } from './types.d';
 import UsersList from './components/UsersList';
-import { useInfiniteQuery } from "react-query";
-
-const fetchUsers = async ({pageParam = 1}: {pageParam?: number}) => {
-  return await fetch(`https://randomuser.me/api/?results=10&seed=rencas&page=${pageParam}`)
-      .then(async res => {
-        if(!res.ok) throw new Error('Error en la petición')
-        return await res.json()
-      })
-      .then(res => {
-        const currentPage = Number(res.info.page);
-        const nextCursor = currentPage > 3 ? undefined : currentPage + 1;
-        return {
-          users: res.results,
-          nextCursor
-        }
-      })
-}
+import { useUsers } from './hooks/useUsers';
 
 function App() {
-  const {
-    isLoading ,
-    isError,
-    data,
-    refetch,
-    fetchNextPage,
-    hasNextPage
-  } = useInfiniteQuery<{nextCursor?: number, users: User []}>(['users'],
-      fetchUsers,
-      {
-        getNextPageParam: (lastPage) => lastPage.nextCursor
-      }
-  )
-
-  const users: User [] = data?.pages?.flatMap(page => page.users) ?? [];
+  const { isLoading, isError, users, fetchNextPage, hasNextPage, refetch } =
+    useUsers();
 
   const [showColors, setShowColors] = useState(false);
   const [sorting, setSorting] = useState<SortBy>(SortBy.NONE);
@@ -110,16 +81,29 @@ function App() {
         />
       </header>
       <main>
-        {users.length > 0 && <UsersList
-                showColors={showColors}
-                users={sortedUsers}
-                deleteUser={handleDelete}
-                changeSorting={handleChangeSort}
-            />}
+        {users.length > 0 && (
+          <UsersList
+            showColors={showColors}
+            users={sortedUsers}
+            deleteUser={handleDelete}
+            changeSorting={handleChangeSort}
+          />
+        )}
         {isLoading && <p>Cargando...</p>}
         {isError && <p>Ha habido un error...</p>}
         {!isLoading && !isError && users.length === 0 && <p>No hay usuarios</p>}
-        {!isLoading && !isError && hasNextPage === true && <button onClick={async () => {await fetchNextPage()}}>Cargar más resultados</button>}
+        {!isLoading && !isError && hasNextPage === true && (
+          <button
+            onClick={async () => {
+              await fetchNextPage();
+            }}
+          >
+            Cargar más resultados
+          </button>
+        )}
+        {!isLoading && !isError && hasNextPage === false && (
+          <p>No hay más resultados</p>
+        )}
       </main>
     </>
   );
